@@ -6,9 +6,10 @@ import random
 
 
 class Interpreter():
-    def __init__(self, program_filepath) -> None:
+    def __init__(self, program_filepath, verbose = False) -> None:
         self.program_filepath: str = program_filepath
-        self.line_number: int = 0 
+        self.line_number: int = 0
+        self.verbose: bool = verbose 
 
         self.data = {
             'NODE'      : ''.join(random.choices(string.ascii_letters + string.digits, k=10)),
@@ -18,12 +19,18 @@ class Interpreter():
             'SERVER'    : [],
             'ACLIENT'   : [],
             'ASERVER'   : [],
-            'TYPE'      : [],
+            'MSG'       : [],
+            'SRV'       : [],
         }
 
         self.read()
         self.parse()
         self.write()
+
+    
+    def raiseError(self, msg: str) -> None:
+        print(f"[!] line {self.line_number}: {msg}")
+        exit()
 
 
     def read(self) -> None:
@@ -38,28 +45,35 @@ class Interpreter():
     def parse(self) -> None:
         print('[*] parsing')
         func = self.analyze_config
+
+        # parse the code line by line
         for line in self.program_lines:
             self.line_number += 1
             line = self.remove_comment(line=line)
 
-            if(line[:-1] == 'PUBLISHER'):
+            if (line[:-1] == 'PUBLISHER'):
                 func = self.analyze_pub
                 continue
-            elif(line[:-1] == 'SUBSCRIBER'):
+            elif (line[:-1] == 'SUBSCRIBER'):
                 func = self.analyze_sub
                 continue
-            elif(line[:-1] == 'CLIENT'):
+            elif (line[:-1] == 'CLIENT'):
                 func = self.analyze_cli
                 continue
-            elif(line[:-1] == 'SERVER'):
+            elif (line[:-1] == 'SERVER'):
                 func = self.analyze_ser
                 continue
-            elif(':' in line):
+            elif (':' in line):
                 func = self.analyze_config
 
             func(line=line)
 
-        print(self.data)
+        # delete duplicated types
+        for msg_type in ['MSG', 'SRV']:
+            unique_tuples = set(tuple(sublist) for sublist in self.data[msg_type])
+            self.data[msg_type] = [list(tup) for tup in unique_tuples]
+
+        if self.verbose: print(self.data)
 
 
     def remove_comment(self, line) -> str:
@@ -83,10 +97,18 @@ class Interpreter():
             msg_type    = str(args[0])
             topic       = str(args[1])
         except IndexError:
-            print(f"[!] line {self.line_number}: wrong arguments for publisher")
+            self.raiseError(f"wrong arguments for publisher: {line}")
+
+        msg = [x.strip() for x in msg_type.split('/')]
+        if (len(msg) < 2): 
+            self.raiseError(f"wrong message type given: {msg[0]}")
+        self.data['MSG'].append(msg)
         
         try:
-            queue_size  = int(args[2])
+            if args[2].isdigit(): 
+                queue_size  = int(args[2])
+            else:
+                self.raiseError(f"queue_size must be integer: {args[2]}")
         except (IndexError, ValueError):
             queue_size  = 10 
 
@@ -107,10 +129,18 @@ class Interpreter():
             topic       = str(args[1])
             callback    = str(args[2])
         except IndexError:
-            print(f"[!] line {self.line_number}: wrong arguments for subscriber")
+            self.raiseError(f"wrong arguments for subscriber: {line}")
         
+        msg = [x.strip() for x in msg_type.split('/')]
+        if (len(msg) < 2): 
+            self.raiseError(f"wrong message type given: {msg[0]}")
+        self.data['MSG'].append(msg)
+
         try:
-            queue_size  = int(args[3])
+            if args[3].isdigit(): 
+                queue_size  = int(args[3])
+            else:
+                self.raiseError(f"queue_size must be integer: {args[3]}")
         except (IndexError, ValueError):
             queue_size  = 10 
 
@@ -139,11 +169,26 @@ class Interpreter():
                 'from rclpy.node import Node\n'
             )
 
+            # import necessary msg types
+            for msg_type in self.data['MSG']:
+                output_file.write(
+                    f'from {msg_type[0]}.msgs import {msg_type[1]}\n'
+                )
 
+            # import necessary srv types
+            for msg_type in self.data['SRV']:
+                output_file.write(
+                    f'from {msg_type[0]}.srvs import {msg_type[1]}\n'
+                )
+
+            output_file.write(
+                f'\n\nclass {self.data['NODE'][0].upper() + self.data['NODE'][1:].lower()}():\n'
+                '\tdef __init__(self) -> None:\n'
+            )
 
 def main():
     program_filepath = sys.argv[1]
-    Interpreter(program_filepath)
+    Interpreter(program_filepath, True)
 
 
 if __name__ == '__main__':
