@@ -1,0 +1,8 @@
+NODE: subscriber
+DESCRIPTION: 
+
+PUBLISHER:  # pub_name: type, topic_name, (queue_size)
+
+SUBSCRIBER: # sub_name: type, topic_name, callback, (queue_size)
+    data1     : std_msgs/String,    /data1,     callback1
+    data2     : std_msgs/Int64,     /data2,     callback2,  15
