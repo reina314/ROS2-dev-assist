@@ -1,0 +1,18 @@
+NODE: template
+DESCRIPTION: This is a template.
+
+PUBLISHER:  # pub_name: type, topic_name, (queue_size)
+    # example  : std_msgs/String,  /example, 10
+
+SUBSCRIBER: # sub_name: type, topic_name, callback, (queue_size)
+    # example  : std_msgs/String,  /example, example_callback
+
+CLIENT: # not implemented yet
+SERVER: # not implemented yet
+
+ACLIENT: # not implemented yet
+ASERVER: # not implemented yet
+
+
+TIMER:      # timer_name: interval(s), callback
+    # example  : 1,  example_callback
