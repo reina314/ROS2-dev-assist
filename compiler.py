@@ -1,4 +1,4 @@
-#!/opt/homebrew/bin/python3
+#!/usr/bin/python3
 
 import os
 import string
@@ -17,8 +17,9 @@ class Compiler():
 
         self.data = {
             # Compile options
-            'NODE'      : ''.join(random.choices(string.ascii_letters + string.digits, k=10)),
-            'TAB'       : 4,
+            'NODE'          : ''.join(random.choices(string.ascii_letters + string.digits, k=10)),
+            'TAB'           : 4,
+            'DESCRIPTION'   : '',
 
             # Communication
             'PUBLISHER' : [],
@@ -202,6 +203,14 @@ class Compiler():
         pass
 
 
+    def analyze_acl(self, line: str) -> None:
+        pass
+
+
+    def analyze_ase(self, line: str) -> None:
+        pass
+
+
     def analyze_timer(self, line: str) -> None:
         name, data = self.analyze_opcode(line=line)
         if (data == None): return
@@ -248,6 +257,9 @@ class Compiler():
             output_file.write(
                 f'\n\nclass {self.data['NODE'][0].upper() + self.data['NODE'][1:].lower()}(Node):\n'
                 f'{self.tab()}def __init__(self) -> None:\n'
+                f'{self.tab(2)}"""\n'
+                f'{self.tab(2)}{self.data['DESCRIPTION']}\n'
+                f'{self.tab(2)}"""\n'
                 f'{self.tab(2)}super().__init__("{self.data['NODE']}")\n'
             )
 
@@ -255,19 +267,19 @@ class Compiler():
             if (len(self.data['PUBLISHER']) > 0):
                 output_file.write(f'\n{self.tab(2)}# Publisher\n')
                 for pub in self.data['PUBLISHER']:
-                    output_file.write(f'{self.tab(2)}self.{pub['name']}_pub = self.create_publisher({pub['type'].split('/')[1]}, "{pub['topic']}", {pub['queue_size']})\n')
+                    output_file.write(f'{self.tab(2)}self.{pub['name']} = self.create_publisher({pub['type'].split('/')[1]}, "{pub['topic']}", {pub['queue_size']})\n')
 
             # subscriber
             if (len(self.data['SUBSCRIBER']) > 0):
                 output_file.write(f'\n{self.tab(2)}# Subscriber\n')
                 for sub in self.data['SUBSCRIBER']:
-                    output_file.write(f'{self.tab(2)}self.{sub['name']}_sub = self.create_subscription({sub['type'].split('/')[1]}, "{sub['topic']}", self.{sub['callback']}, {sub['queue_size']})\n')
+                    output_file.write(f'{self.tab(2)}self.{sub['name']} = self.create_subscription({sub['type'].split('/')[1]}, "{sub['topic']}", self.{sub['callback']}, {sub['queue_size']})\n')
 
             # timer
             if (len(self.data['TIMER']) > 0):
                 output_file.write(f'\n{self.tab(2)}# Timer\n')
                 for timer in self.data['TIMER']:
-                    output_file.write(f'{self.tab(2)}self.{timer['name']}_timer = self.create_timer({timer['interval']}, self.{timer['callback']})\n')
+                    output_file.write(f'{self.tab(2)}self.{timer['name']} = self.create_timer({timer['interval']}, self.{timer['callback']})\n')
 
             output_file.write('\n\n')
 
@@ -276,7 +288,7 @@ class Compiler():
                 output_file.write(f'\n{self.tab()}# Callback')
                 for sub in self.data['SUBSCRIBER']:
                     output_file.write(
-                        f'\n{self.tab()}def {sub['callback']}_cb(self) -> None:\n'
+                        f'\n{self.tab()}def {sub['callback']}(self) -> None:\n'
                         f'{self.tab(2)}pass\n'
                     )
 
