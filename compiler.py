@@ -285,10 +285,17 @@ class Compiler():
 
             # callback
             if (len(self.data['SUBSCRIBER']) > 0):
-                output_file.write(f'\n{self.tab()}# Callback')
+                output_file.write(f'\n{self.tab()}# Callback for Subscriber')
                 for sub in self.data['SUBSCRIBER']:
                     output_file.write(
                         f'\n{self.tab()}def {sub["callback"]}(self) -> None:\n'
+                        f'{self.tab(2)}pass\n'
+                    )
+            if (len(self.data['TIMER']) > 0):
+                output_file.write(f'\n{self.tab()}# Callback for Timer')
+                for timer in self.data['TIMER']:
+                    output_file.write(
+                        f'\n{self.tab()}def {timer["callback"]}(self) -> None:\n'
                         f'{self.tab(2)}pass\n'
                     )
 
