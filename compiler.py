@@ -260,20 +260,20 @@ class Compiler():
                 f'{self.tab(2)}"""\n'
                 f'{self.tab(2)}{self.data["DESCRIPTION"]}\n'
                 f'{self.tab(2)}"""\n'
-                f'{self.tab(2)}super().__init__("{self.data['NODE']}")\n'
+                f'{self.tab(2)}super().__init__("{self.data["NODE"]}")\n'
             )
 
             # publisher
             if (len(self.data['PUBLISHER']) > 0):
                 output_file.write(f'\n{self.tab(2)}# Publisher\n')
                 for pub in self.data['PUBLISHER']:
-                    output_file.write(f'{self.tab(2)}self.{pub["name"]} = self.create_publisher({pub["type"].split("/")[1]}, "{pub['topic']}", {pub["queue_size"]})\n')
+                    output_file.write(f'{self.tab(2)}self.{pub["name"]} = self.create_publisher({pub["type"].split("/")[1]}, "{pub["topic"]}", {pub["queue_size"]})\n')
 
             # subscriber
             if (len(self.data['SUBSCRIBER']) > 0):
                 output_file.write(f'\n{self.tab(2)}# Subscriber\n')
                 for sub in self.data['SUBSCRIBER']:
-                    output_file.write(f'{self.tab(2)}self.{sub["name"]} = self.create_subscription({sub["type"].split("/")[1]}, "{sub['topic']}", self.{sub["callback"]}, {sub["queue_size"]})\n')
+                    output_file.write(f'{self.tab(2)}self.{sub["name"]} = self.create_subscription({sub["type"].split("/")[1]}, "{sub["topic"]}", self.{sub["callback"]}, {sub["queue_size"]})\n')
 
             # timer
             if (len(self.data['TIMER']) > 0):
