@@ -42,7 +42,7 @@ class Compiler():
         self.write()
         self.merge()
 
-        print(f'[*] {program_filepath} is successfully compiled and saved as {self.data['NODE'].lower()}.py!\n\n')
+        print(f'[*] {program_filepath} is successfully compiled and saved as {self.data["NODE"].lower()}.py!\n\n')
 
     
     def raiseError(self, msg: str) -> None:
@@ -240,7 +240,7 @@ class Compiler():
 
     def write(self) -> None:
         print('[*] compiling...')
-        with open(f'.{self.data['NODE'].lower()}.py.tmp', 'w') as output_file:
+        with open(f'.{self.data["NODE"].lower()}.py.tmp', 'w') as output_file:
             output_file.write(
                 'import rclpy\n'
                 'from rclpy.node import Node\n'
@@ -255,10 +255,10 @@ class Compiler():
                 output_file.write(f'from {msg_type[0]}.srvs import {msg_type[1]}\n')
 
             output_file.write(
-                f'\n\nclass {self.data['NODE'][0].upper() + self.data['NODE'][1:].lower()}(Node):\n'
+                f'\n\nclass {self.data["NODE"][0].upper() + self.data["NODE"][1:].lower()}(Node):\n'
                 f'{self.tab()}def __init__(self) -> None:\n'
                 f'{self.tab(2)}"""\n'
-                f'{self.tab(2)}{self.data['DESCRIPTION']}\n'
+                f'{self.tab(2)}{self.data["DESCRIPTION"]}\n'
                 f'{self.tab(2)}"""\n'
                 f'{self.tab(2)}super().__init__("{self.data['NODE']}")\n'
             )
@@ -267,19 +267,19 @@ class Compiler():
             if (len(self.data['PUBLISHER']) > 0):
                 output_file.write(f'\n{self.tab(2)}# Publisher\n')
                 for pub in self.data['PUBLISHER']:
-                    output_file.write(f'{self.tab(2)}self.{pub['name']} = self.create_publisher({pub['type'].split('/')[1]}, "{pub['topic']}", {pub['queue_size']})\n')
+                    output_file.write(f'{self.tab(2)}self.{pub["name"]} = self.create_publisher({pub["type"].split("/")[1]}, "{pub['topic']}", {pub["queue_size"]})\n')
 
             # subscriber
             if (len(self.data['SUBSCRIBER']) > 0):
                 output_file.write(f'\n{self.tab(2)}# Subscriber\n')
                 for sub in self.data['SUBSCRIBER']:
-                    output_file.write(f'{self.tab(2)}self.{sub['name']} = self.create_subscription({sub['type'].split('/')[1]}, "{sub['topic']}", self.{sub['callback']}, {sub['queue_size']})\n')
+                    output_file.write(f'{self.tab(2)}self.{sub["name"]} = self.create_subscription({sub["type"].split("/")[1]}, "{sub['topic']}", self.{sub["callback"]}, {sub["queue_size"]})\n')
 
             # timer
             if (len(self.data['TIMER']) > 0):
                 output_file.write(f'\n{self.tab(2)}# Timer\n')
                 for timer in self.data['TIMER']:
-                    output_file.write(f'{self.tab(2)}self.{timer['name']} = self.create_timer({timer['interval']}, self.{timer['callback']})\n')
+                    output_file.write(f'{self.tab(2)}self.{timer["name"]} = self.create_timer({timer["interval"]}, self.{timer["callback"]})\n')
 
             output_file.write('\n\n')
 
@@ -288,7 +288,7 @@ class Compiler():
                 output_file.write(f'\n{self.tab()}# Callback')
                 for sub in self.data['SUBSCRIBER']:
                     output_file.write(
-                        f'\n{self.tab()}def {sub['callback']}(self) -> None:\n'
+                        f'\n{self.tab()}def {sub["callback"]}(self) -> None:\n'
                         f'{self.tab(2)}pass\n'
                     )
 
@@ -296,7 +296,7 @@ class Compiler():
             output_file.write(
                 '\n\ndef main(args=None):\n'
                 f'{self.tab()}rclpy.init(args=args)\n'
-                f'\n{self.tab()}node = {self.data['NODE'][0].upper() + self.data['NODE'][1:].lower()}()\n'
+                f'\n{self.tab()}node = {self.data["NODE"][0].upper() + self.data["NODE"][1:].lower()}()\n'
                 f'{self.tab()}rclpy.spin(node)\n'
                 f'\n{self.tab()}node.destroy_node()\n'
                 f'{self.tab()}rclpy.shutdown()\n'
@@ -304,10 +304,10 @@ class Compiler():
 
 
     def merge(self) -> None:
-        Merger(f'{self.data['NODE'].lower()}.py', f'.{self.data['NODE'].lower()}.py.tmp', f'{self.data['NODE'].lower()}.py', self.verbose)
+        Merger(f'{self.data["NODE"].lower()}.py', f'.{self.data["NODE"].lower()}.py.tmp', f'{self.data["NODE"].lower()}.py', self.verbose)
 
         try:
-            os.remove(f'.{self.data['NODE'].lower()}.py.tmp')
+            os.remove(f'.{self.data["NODE"].lower()}.py.tmp')
         except Exception as e:
             self.raiseError(f"can't delete .{self.data['NODE'].lower()}.py.tmp: {e}")
 
