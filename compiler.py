@@ -248,11 +248,11 @@ class Compiler():
 
             # import necessary msg types
             for msg_type in self.data['MSG']:
-                output_file.write(f'from {msg_type[0]}.msgs import {msg_type[1]}\n')
+                output_file.write(f'from {msg_type[0]}.msg import {msg_type[1]}\n')
 
             # import necessary srv types
             for msg_type in self.data['SRV']:
-                output_file.write(f'from {msg_type[0]}.srvs import {msg_type[1]}\n')
+                output_file.write(f'from {msg_type[0]}.srv import {msg_type[1]}\n')
 
             output_file.write(
                 f'\n\nclass {self.data["NODE"][0].upper() + self.data["NODE"][1:].lower()}(Node):\n'
