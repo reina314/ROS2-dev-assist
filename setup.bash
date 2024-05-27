@@ -1,2 +1,2 @@
 #/bin/bash
-ln -s ./compiler.py /usr/bin/local/pycompile
+ln -s $(pwd)/compiler.py /usr/local/bin/pycompile
