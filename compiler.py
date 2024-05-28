@@ -12,6 +12,7 @@ class Compiler():
         print(f'[*] processing {program_filepath}...')
 
         self.program_filepath: str = program_filepath
+        self.line: str = ''
         self.line_number: int = 0
         self.verbose: bool = verbose 
 
@@ -67,28 +68,29 @@ class Compiler():
         for line in self.program_lines:
             self.line_number += 1
             has_indent = self.has_indent(line=line)
-            line = self.remove_comment(line=line)
+            self.line = self.remove_comment(line=line)
+            name, data = self.analyze_opcode(line=self.line)
 
             if (not has_indent):
-                if ('PUBLISHER:' in line):
+                if (name.upper() == 'PUBLISHER'):
                     func = self.analyze_pub
                     continue
-                elif ('SUBSCRIBER:' in line):
+                elif (name.upper() == 'SUBSCRIBER'):
                     func = self.analyze_sub
                     continue
-                elif ('CLIENT:' in line):
+                elif (name.upper() == 'CLIENT'):
                     func = self.analyze_cli
                     continue
-                elif ('SERVER:' in line):
+                elif (name.upper() == 'SERVER'):
                     func = self.analyze_ser
                     continue
-                elif ('TIMER:' in line):
+                elif (name.upper() == 'TIMER'):
                     func = self.analyze_timer
                     continue
-                elif (':' in line):
+                elif (name != None and data != None):
                     func = self.analyze_config
 
-            func(line=line)
+            func(name, data)
 
         # delete duplicated types
         for msg_type in ['MSG', 'SRV']:
@@ -102,6 +104,14 @@ class Compiler():
         return len(line) != len(line.lstrip())
 
 
+    def isfloat(self, data: str) -> bool:
+        try:
+            data = float(data)
+            return True
+        except ValueError:
+            return False
+
+
     def remove_comment(self, line: str) -> str:
         index = line.find('#')
         return line if index == -1 else line[0:line.find('#') - 1].strip()
@@ -110,32 +120,35 @@ class Compiler():
     def analyze_opcode(self, line: str) -> tuple[str, list[str]]:
         parsed_code = [x.strip() for x in line.split(':')]
         try:
-            lvalue: str         = parsed_code[0]
-            rvalue: list[str]   = parsed_code[1]
-            return lvalue, rvalue
+            name: str         = parsed_code[0]
+            data: list[str]   = parsed_code[1]
+            return name, data
         except IndexError:
-            return None, None
+            return name, None
 
 
-    def analyze_config(self, line: str) -> None:
-        name, data = self.analyze_opcode(line=line)
+    def analyze_config(self, name: str, data: list[str]) -> None:
         try:
-            self.data[name.upper()] = int(data) if data.isdigit() else data
+            if data.isdecimal():
+                self.data[name.upper()] = int(data)
+            elif self.isfloat(data):
+                self.data[name.upper()] = float(data)
+            else:
+                self.data[name.upper()] = data
         except (AttributeError, IndexError):
             return
 
 
-    def analyze_pub(self, line: str) -> None:
-        name, data = self.analyze_opcode(line=line)
+    def analyze_pub(self, name: str, data: list[str]) -> None:
         if (data == None): return
         args: list[str] = [x.strip() for x in data.split(',')]
         
         try:
-            name       = str(name)
+            name        = str(name)
             msg_type    = str(args[0])
             topic       = str(args[1])
         except IndexError:
-            self.raiseError(f"wrong arguments for publisher: {line}")
+            self.raiseError(f"wrong arguments for publisher: {self.line}")
 
         msg = [x.strip() for x in msg_type.split('/')]
         if (len(msg) < 2): 
@@ -143,7 +156,7 @@ class Compiler():
         self.data['MSG'].append(msg)
         
         try:
-            if args[2].isdigit(): 
+            if args[2].isdecimal(): 
                 queue_size  = int(args[2])
             else:
                 self.raiseError(f"queue_size must be integer: {args[2]}")
@@ -151,7 +164,7 @@ class Compiler():
             queue_size  = 10 
 
         data = {
-            'name'     : name,
+            'name'      : name,
             'type'      : msg_type,
             'topic'     : topic,
             'queue_size': queue_size
@@ -159,18 +172,17 @@ class Compiler():
         self.data['PUBLISHER'].append(data)
 
 
-    def analyze_sub(self, line: str) -> None:
-        name, data = self.analyze_opcode(line=line)
+    def analyze_sub(self, name: str, data: list[str]) -> None:
         if (data == None): return
         args: list[str] = [x.strip() for x in data.split(',')]
         
         try:
-            name       = str(name)
+            name        = str(name)
             msg_type    = str(args[0])
             topic       = str(args[1])
             callback    = str(args[2])
         except IndexError:
-            self.raiseError(f"wrong arguments for subscriber: {line}")
+            self.raiseError(f"wrong arguments for subscriber: {self.line}")
         
         msg = [x.strip() for x in msg_type.split('/')]
         if (len(msg) < 2): 
@@ -178,7 +190,7 @@ class Compiler():
         self.data['MSG'].append(msg)
 
         try:
-            if args[3].isdigit(): 
+            if args[3].isdecimal(): 
                 queue_size  = int(args[3])
             else:
                 self.raiseError(f"queue_size must be integer: {args[3]}")
@@ -186,7 +198,7 @@ class Compiler():
             queue_size  = 10 
 
         data = {
-            'name'     : name,
+            'name'      : name,
             'type'      : msg_type,
             'topic'     : topic,
             'callback'  : callback,
@@ -195,24 +207,52 @@ class Compiler():
         self.data['SUBSCRIBER'].append(data)
 
 
-    def analyze_cli(self, line: str) -> None:
+    def analyze_cli(self, name: str, data: list[str]) -> None:
+        if (data == None): return
+        args: list[str] = [x.strip() for x in data.split(',')]
+        
+        try:
+            name       = str(name)
+            srv_type    = str(args[0])
+            service       = str(args[1])
+        except IndexError:
+            self.raiseError(f"wrong arguments for client: {self.line}")
+
+        msg = [x.strip() for x in srv_type.split('/')]
+        if (len(msg) < 2): 
+            self.raiseError(f"wrong message type given: {msg[0]}")
+        self.data['SRV'].append(msg)
+        
+        try:
+            if self.isfloat(args[2]): 
+                timeout  = float(args[2])
+            else:
+                self.raiseError(f"timeout must be float: {args[2]}")
+        except (IndexError, ValueError):
+            timeout  = 1.0 
+
+        data = {
+            'name'      : name,
+            'type'      : srv_type,
+            'service'   : service,
+            'timeout'   : timeout
+        }
+        self.data['CLIENT'].append(data)
+
+
+    def analyze_ser(self, name: str, data: list[str]) -> None:
         pass
 
 
-    def analyze_ser(self, line: str) -> None:
+    def analyze_acl(self, name: str, data: list[str]) -> None:
         pass
 
 
-    def analyze_acl(self, line: str) -> None:
+    def analyze_ase(self, name: str, data: list[str]) -> None:
         pass
 
 
-    def analyze_ase(self, line: str) -> None:
-        pass
-
-
-    def analyze_timer(self, line: str) -> None:
-        name, data = self.analyze_opcode(line=line)
+    def analyze_timer(self, name: str, data: list[str]) -> None:
         if (data == None): return
         args: list[str] = [x.strip() for x in data.split(',')]
         
@@ -221,7 +261,7 @@ class Compiler():
             interval    = int(args[0])
             callback    = str(args[1])
         except IndexError:
-            self.raiseError(f"wrong arguments for timer: {line}")
+            self.raiseError(f"wrong arguments for timer: {self.line}")
 
         data = {
             'name'     : name,
@@ -275,11 +315,26 @@ class Compiler():
                 for sub in self.data['SUBSCRIBER']:
                     output_file.write(f'{self.tab(2)}self.{sub["name"]} = self.create_subscription({sub["type"].split("/")[1]}, "{sub["topic"]}", self.{sub["callback"]}, {sub["queue_size"]})\n')
 
+            # client
+            if (len(self.data['CLIENT']) > 0):
+                output_file.write(f'\n{self.tab(2)}# Client\n')
+                for cli in self.data['CLIENT']:
+                    output_file.write(f'{self.tab(2)}self.{cli["name"]} = self.create_client({cli["type"].split("/")[1]}, "{cli["service"]}")\n')
+
             # timer
             if (len(self.data['TIMER']) > 0):
                 output_file.write(f'\n{self.tab(2)}# Timer\n')
                 for timer in self.data['TIMER']:
                     output_file.write(f'{self.tab(2)}self.{timer["name"]} = self.create_timer({timer["interval"]}, self.{timer["callback"]})\n')
+
+            # wait for service
+            if (len(self.data['CLIENT']) > 0):
+                output_file.write(f'\n{self.tab(2)}# wait for service\n')
+                for cli in self.data['CLIENT']:
+                    output_file.write(
+                        f'{self.tab(2)}while not self.{cli["name"]}.wait_for_service(timeout_sec={cli["timeout"]}):\n'
+                        f'{self.tab(3)}self.get_logger().info("service {cli["service"]} not avilable, waiting...")\n'
+                    )
 
             output_file.write('\n\n')
 
@@ -321,12 +376,12 @@ class Compiler():
 
 def main():
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument("args", nargs='+', help="Arguments (one or more).")
-    parser.add_argument("--verbose", action="store_true", help="Increase output verbosity.")
+    parser.add_argument("filepath", nargs='+', help="one or more yaml files' paths to compile")
+    parser.add_argument("--verbose", action="store_true", help="increase output verbosity")
     args = parser.parse_args()
 
-    for arg in args.args:
-        Compiler(arg, args.verbose)
+    for path in args.filepath:
+        Compiler(path, args.verbose)
 
 
 if __name__ == '__main__':
