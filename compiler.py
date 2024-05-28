@@ -212,9 +212,10 @@ class Compiler():
         args: list[str] = [x.strip() for x in data.split(',')]
         
         try:
-            name       = str(name)
+            name        = str(name)
             srv_type    = str(args[0])
-            service       = str(args[1])
+            service     = str(args[1])
+            request     = str(args[2])
         except IndexError:
             self.raiseError(f"wrong arguments for client: {self.line}")
 
@@ -224,8 +225,8 @@ class Compiler():
         self.data['SRV'].append(msg)
         
         try:
-            if self.isfloat(args[2]): 
-                timeout  = float(args[2])
+            if self.isfloat(args[3]): 
+                timeout  = float(args[3])
             else:
                 self.raiseError(f"timeout must be float: {args[2]}")
         except (IndexError, ValueError):
@@ -235,6 +236,7 @@ class Compiler():
             'name'      : name,
             'type'      : srv_type,
             'service'   : service,
+            'request'   : request,
             'timeout'   : timeout
         }
         self.data['CLIENT'].append(data)
@@ -319,7 +321,10 @@ class Compiler():
             if (len(self.data['CLIENT']) > 0):
                 output_file.write(f'\n{self.tab(2)}# Client\n')
                 for cli in self.data['CLIENT']:
-                    output_file.write(f'{self.tab(2)}self.{cli["name"]} = self.create_client({cli["type"].split("/")[1]}, "{cli["service"]}")\n')
+                    output_file.write(
+                        f'{self.tab(2)}self.{cli["name"]} = self.create_client({cli["type"].split("/")[1]}, "{cli["service"]}")\n'
+                        f'{self.tab(2)}self.{cli["request"]} = {cli["type"].split("/")[1]}.Request()\n'
+                    )
 
             # timer
             if (len(self.data['TIMER']) > 0):
@@ -329,7 +334,7 @@ class Compiler():
 
             # wait for service
             if (len(self.data['CLIENT']) > 0):
-                output_file.write(f'\n{self.tab(2)}# wait for service\n')
+                output_file.write(f'\n{self.tab(2)}# Wait for Service\n')
                 for cli in self.data['CLIENT']:
                     output_file.write(
                         f'{self.tab(2)}while not self.{cli["name"]}.wait_for_service(timeout_sec={cli["timeout"]}):\n'
@@ -337,6 +342,19 @@ class Compiler():
                     )
 
             output_file.write('\n\n')
+
+            # send request
+            if (len(self.data['CLIENT']) > 0):
+                output_file.write(f'\n{self.tab()}# Send Request')
+                for cli in self.data['CLIENT']:
+                    output_file.write(
+                        f'\n{self.tab()}def send_{cli["request"]}(self, data) -> None:\n'
+                        f'{self.tab(2)}self.{cli["request"]} = data     # change here\n'
+                        f'{self.tab(2)}self.future_{cli["request"]} = self.order_client.call_async(self.request)\n'
+                        f'{self.tab(2)}rclpy.spin_until_future_complete(self, self.future_{cli["request"]})\n'
+                        f'{self.tab(2)}return self.future_{cli["request"]}.result()\n'
+                    )
+                
 
             # callback
             if (len(self.data['SUBSCRIBER']) > 0):
