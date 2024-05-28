@@ -1,4 +1,5 @@
 # ROS2-dev-assist
+This is a Python framework for ROS 2 development which helps keep the codes more consistent, configurable, and beautiful.
 
 ## Setup
 1. Clone the repository
