@@ -7,8 +7,11 @@ PUBLISHER:  # pub_name: type, topic_name, (queue_size)
 SUBSCRIBER: # sub_name: type, topic_name, callback, (queue_size)
     # example  : std_msgs/String,  /example, example_callback
 
-CLIENT: # not implemented yet
-SERVER: # not implemented yet
+CLIENT:     # cli_name: type, service_name, (timeout)
+    # example  : std_srvs/Empty,   example,  1.5
+
+SERVER:     # ser_name: type, service_name, callback
+    # example  : std_srvs/Empty,   example,  example_callback
 
 ACLIENT: # not implemented yet
 ASERVER: # not implemented yet
