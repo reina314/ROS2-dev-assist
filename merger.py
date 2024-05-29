@@ -22,7 +22,7 @@ class Merger():
         self.merge()
         self.write()
 
-        print(f'\n[*] merge is successfully completed and saved as {output_path}!')
+        print(f'\n[*] successfully merged and saved as {output_path}!')
 
 
     def raiseError(self, msg: str) -> None:
@@ -76,9 +76,9 @@ class Merger():
 
 def main():
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument("dest", nargs=1, help="Arguments (output).")
-    parser.add_argument("srcs", nargs=2, help="Arguments (original and incoming).")
-    parser.add_argument("--verbose", action="store_true", help="Increase output verbosity.")
+    parser.add_argument("dest", nargs=1, help="destination (output)")
+    parser.add_argument("srcs", nargs=2, help="source (original and incoming)")
+    parser.add_argument("--verbose", action="store_true", help="increase output verbosity")
     args = parser.parse_args()
 
     Merger(args.srcs[0], args.srcs[1], args.dest[0], args.verbose)
