@@ -219,10 +219,10 @@ class Compiler():
         except IndexError:
             self.raiseError(f"wrong arguments for client: {self.line}")
 
-        msg = [x.strip() for x in srv_type.split('/')]
-        if (len(msg) < 2): 
-            self.raiseError(f"wrong message type given: {msg[0]}")
-        self.data['SRV'].append(msg)
+        srv = [x.strip() for x in srv_type.split('/')]
+        if (len(srv) < 2): 
+            self.raiseError(f"wrong message type given: {srv[0]}")
+        self.data['SRV'].append(srv)
         
         try:
             if self.isfloat(args[3]): 
@@ -243,7 +243,29 @@ class Compiler():
 
 
     def analyze_ser(self, name: str, data: list[str]) -> None:
-        pass
+        if (data == None): return
+        args: list[str] = [x.strip() for x in data.split(',')]
+        
+        try:
+            name        = str(name)
+            srv_type    = str(args[0])
+            service     = str(args[1])
+            callback    = str(args[2])
+        except IndexError:
+            self.raiseError(f"wrong arguments for server: {self.line}")
+
+        srv = [x.strip() for x in srv_type.split('/')]
+        if (len(srv) < 2): 
+            self.raiseError(f"wrong message type given: {srv[0]}")
+        self.data['SRV'].append(srv)
+
+        data = {
+            'name'      : name,
+            'type'      : srv_type,
+            'service'   : service,
+            'callback'  : callback
+        }
+        self.data['SERVER'].append(data)
 
 
     def analyze_acl(self, name: str, data: list[str]) -> None:
@@ -298,10 +320,10 @@ class Compiler():
 
             output_file.write(
                 f'\n\nclass {self.data["NODE"][0].upper() + self.data["NODE"][1:].lower()}(Node):\n'
+                f'{self.tab()}"""\n'
+                f'{self.tab()}{self.data["DESCRIPTION"]}\n'
+                f'{self.tab()}"""\n\n'
                 f'{self.tab()}def __init__(self) -> None:\n'
-                f'{self.tab(2)}"""\n'
-                f'{self.tab(2)}{self.data["DESCRIPTION"]}\n'
-                f'{self.tab(2)}"""\n'
                 f'{self.tab(2)}super().__init__("{self.data["NODE"]}")\n'
             )
 
@@ -326,6 +348,12 @@ class Compiler():
                         f'{self.tab(2)}self.{cli["request"]} = {cli["type"].split("/")[1]}.Request()\n'
                     )
 
+            # server
+            if (len(self.data['SERVER']) > 0):
+                output_file.write(f'\n{self.tab(2)}# Server\n')
+                for ser in self.data['SERVER']:
+                    output_file.write(f'{self.tab(2)}self.{ser["name"]} = self.create_service({ser["type"].split("/")[1]}, "{ser["service"]}", self.{ser["callback"]})\n')
+
             # timer
             if (len(self.data['TIMER']) > 0):
                 output_file.write(f'\n{self.tab(2)}# Timer\n')
@@ -343,7 +371,7 @@ class Compiler():
 
             output_file.write('\n\n')
 
-            # send request
+            # request
             if (len(self.data['CLIENT']) > 0):
                 output_file.write(f'\n{self.tab()}# Send Request')
                 for cli in self.data['CLIENT']:
@@ -354,7 +382,6 @@ class Compiler():
                         f'{self.tab(2)}rclpy.spin_until_future_complete(self, self.future_{cli["request"]})\n'
                         f'{self.tab(2)}return self.future_{cli["request"]}.result()\n'
                     )
-                
 
             # callback
             if (len(self.data['SUBSCRIBER']) > 0):
@@ -363,6 +390,14 @@ class Compiler():
                     output_file.write(
                         f'\n{self.tab()}def {sub["callback"]}(self) -> None:\n'
                         f'{self.tab(2)}pass\n'
+                    )
+            if (len(self.data['SERVER']) > 0):
+                output_file.write(f'\n{self.tab()}# Callback for Server')
+                for ser in self.data['SERVER']:
+                    output_file.write(
+                        f'\n{self.tab()}def {ser["callback"]}(self, request, response) -> None:\n'
+                        f'{self.tab(2)}response = None  # change here\n'
+                        f'{self.tab(2)}return response\n'
                     )
             if (len(self.data['TIMER']) > 0):
                 output_file.write(f'\n{self.tab()}# Callback for Timer')
